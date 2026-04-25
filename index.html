@@ -400,8 +400,21 @@ function pollAuth(type,sessionId){
         clearPolling();
         sessionToken=data.sessionToken;
         localStorage.setItem('nka_token',sessionToken);
-        if(type==='register'){showStatus('register-status','✓ Authenticated! Complete your profile.','success');setTimeout(()=>showPage('profile-setup'),1000)}
-        else{showStatus('login-status','✓ Authenticated!','success');setTimeout(()=>loadDashboard(),1000)}
+        // resolvedType viene dal backend: 'AUTH' (utente esistente) o 'REGISTER'
+        // (nuovo). Auto-discover dal DB lato server — un utente già registrato
+        // che clicca 'Create account' viene loggato senza form profilo.
+        // Fallback al tipo locale se data.type assente (back-compat backend pre-fix).
+        const resolvedType=(data.type==='AUTH'||data.type==='REGISTER')
+          ?data.type
+          :(type==='register'?'REGISTER':'AUTH');
+        const statusEl=type==='register'?'register-status':'login-status';
+        if(resolvedType==='REGISTER'){
+          showStatus(statusEl,'✓ Authenticated! Complete your profile.','success');
+          setTimeout(()=>showPage('profile-setup'),1000);
+        }else{
+          showStatus(statusEl,'✓ Authenticated!','success');
+          setTimeout(()=>loadDashboard(),1000);
+        }
       }
     }catch(e){}
   },2000);
