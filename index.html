@@ -274,10 +274,44 @@ const DOMAIN='nokeyauth.com';
 let sessionToken=localStorage.getItem('nka_token')||null;
 let currentUser=null,pollInterval=null,countdownInterval=null,pendingEmail=null;
 
+// ── Mobile detection ──
+const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// ── Deep link builder ──
+function buildDeepLink(type,data){
+  const p=new URLSearchParams({v:'1',type:type,nonce:data.nonce,sessionId:data.sessionId,domain:DOMAIN,callback:`${API}/v1/auth/verify`,expires:data.expires});
+  return `nokeyauth://auth?${p.toString()}`;
+}
+
+// ── Render mobile deep link button ──
+function renderMobileDeepLink(containerId,type,data){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  const link=buildDeepLink(type,data);
+  const label=type==='REGISTER'?t('mobile.register'):t('mobile.login');
+  el.innerHTML=`
+    <div style="text-align:center;padding:20px 0">
+      <div style="width:64px;height:64px;background:rgba(48,209,88,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+      </div>
+      <a href="${link}" class="btn btn-green" style="display:inline-flex;max-width:300px;margin:0 auto 12px" id="deeplink-btn-${type}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        ${label}
+      </a>
+      <p style="font-family:var(--mono);font-size:11px;color:var(--gray2);margin-top:8px">${t('mobile.hint')}</p>
+      <div class="qr-countdown" id="${containerId}-countdown" style="margin-top:6px"></div>
+    </div>
+  `;
+  el.style.display='block';
+  document.getElementById(`deeplink-btn-${type}`)?.addEventListener('click',()=>{
+    setTimeout(()=>pollAuth(type==='REGISTER'?'register':'login',data.sessionId),1500);
+  });
+}
+
 const i18n={
-  en:{"home.sub":"Secure authentication for your accounts.","home.register":"Create account","home.login":"Sign in","home.app":"Requires the NoKeyAuth app on iOS","register.title":"Create account","register.sub":"Scan the QR code with the NoKeyAuth app to register.","login.title":"Sign in","login.sub":"Scan the QR code with the NoKeyAuth app.","login.create":"Create account","profile.title":"Complete your profile","profile.sub":"Enter your details to finish registration.","profile.nome":"First name","profile.cognome":"Last name","profile.email":"Email","profile.username":"Username","profile.save":"Save and continue","verify.title":"Verify your email","verify.sub":"Enter the 6-digit code we sent you.","verify.btn":"Verify","verify.resend":"Resend code","qr.generating":"Generating...","qr.waiting":"Waiting for app","or":"or","back":"← Back","dashboard.logout":"Sign out","dash.email":"Email","dash.username":"Username","dash.verify_notice":"Please verify your email to complete registration.","dash.verify_now":"Verify now →","footer.privacy":"Privacy Policy","footer.contact":"Contact","verified":"verified","unverified":"unverified"},
-  it:{"home.sub":"Autenticazione sicura per i tuoi account.","home.register":"Crea account","home.login":"Accedi","home.app":"Richiede l'app NoKeyAuth su iOS","register.title":"Crea account","register.sub":"Scansiona il QR code con l'app NoKeyAuth per registrarti.","login.title":"Accedi","login.sub":"Scansiona il QR code con l'app NoKeyAuth.","login.create":"Crea account","profile.title":"Completa il profilo","profile.sub":"Inserisci i tuoi dati per completare la registrazione.","profile.nome":"Nome","profile.cognome":"Cognome","profile.email":"Email","profile.username":"Username","profile.save":"Salva e continua","verify.title":"Verifica la tua email","verify.sub":"Inserisci il codice a 6 cifre che ti abbiamo inviato.","verify.btn":"Verifica","verify.resend":"Invia di nuovo","qr.generating":"Generazione...","qr.waiting":"In attesa dell'app","or":"oppure","back":"← Indietro","dashboard.logout":"Esci","dash.email":"Email","dash.username":"Username","dash.verify_notice":"Verifica la tua email per completare la registrazione.","dash.verify_now":"Verifica ora →","footer.privacy":"Privacy Policy","footer.contact":"Contatti","verified":"verificata","unverified":"non verificata"},
-  es:{"home.sub":"Autenticación segura para tus cuentas.","home.register":"Crear cuenta","home.login":"Iniciar sesión","home.app":"Requiere la app NoKeyAuth en iOS","register.title":"Crear cuenta","register.sub":"Escanea el código QR con la app NoKeyAuth para registrarte.","login.title":"Iniciar sesión","login.sub":"Escanea el código QR con la app NoKeyAuth.","login.create":"Crear cuenta","profile.title":"Completa tu perfil","profile.sub":"Ingresa tus datos para finalizar el registro.","profile.nome":"Nombre","profile.cognome":"Apellido","profile.email":"Email","profile.username":"Nombre de usuario","profile.save":"Guardar y continuar","verify.title":"Verifica tu email","verify.sub":"Ingresa el código de 6 dígitos que te enviamos.","verify.btn":"Verificar","verify.resend":"Reenviar código","qr.generating":"Generando...","qr.waiting":"Esperando la app","or":"o","back":"← Volver","dashboard.logout":"Cerrar sesión","dash.email":"Email","dash.username":"Nombre de usuario","dash.verify_notice":"Verifica tu email para completar el registro.","dash.verify_now":"Verificar ahora →","footer.privacy":"Política de Privacidad","footer.contact":"Contacto","verified":"verificado","unverified":"no verificado"}
+  en:{"home.sub":"Secure authentication for your accounts.","home.register":"Create account","home.login":"Sign in","home.app":"Requires the NoKeyAuth app on iOS","register.title":"Create account","register.sub":"Scan the QR code with the NoKeyAuth app to register.","login.title":"Sign in","login.sub":"Scan the QR code with the NoKeyAuth app.","login.create":"Create account","profile.title":"Complete your profile","profile.sub":"Enter your details to finish registration.","profile.nome":"First name","profile.cognome":"Last name","profile.email":"Email","profile.username":"Username","profile.save":"Save and continue","verify.title":"Verify your email","verify.sub":"Enter the 6-digit code we sent you.","verify.btn":"Verify","verify.resend":"Resend code","qr.generating":"Generating...","qr.waiting":"Waiting for app","or":"or","back":"← Back","dashboard.logout":"Sign out","dash.email":"Email","dash.username":"Username","dash.verify_notice":"Please verify your email to complete registration.","dash.verify_now":"Verify now →","footer.privacy":"Privacy Policy","footer.contact":"Contact","verified":"verified","unverified":"unverified","mobile.register":"Open NoKeyAuth to register","mobile.login":"Open NoKeyAuth to sign in","mobile.hint":"Tap to open the NoKeyAuth app"},
+  it:{"home.sub":"Autenticazione sicura per i tuoi account.","home.register":"Crea account","home.login":"Accedi","home.app":"Richiede l'app NoKeyAuth su iOS","register.title":"Crea account","register.sub":"Scansiona il QR code con l'app NoKeyAuth per registrarti.","login.title":"Accedi","login.sub":"Scansiona il QR code con l'app NoKeyAuth.","login.create":"Crea account","profile.title":"Completa il profilo","profile.sub":"Inserisci i tuoi dati per completare la registrazione.","profile.nome":"Nome","profile.cognome":"Cognome","profile.email":"Email","profile.username":"Username","profile.save":"Salva e continua","verify.title":"Verifica la tua email","verify.sub":"Inserisci il codice a 6 cifre che ti abbiamo inviato.","verify.btn":"Verifica","verify.resend":"Invia di nuovo","qr.generating":"Generazione...","qr.waiting":"In attesa dell'app","or":"oppure","back":"← Indietro","dashboard.logout":"Esci","dash.email":"Email","dash.username":"Username","dash.verify_notice":"Verifica la tua email per completare la registrazione.","dash.verify_now":"Verifica ora →","footer.privacy":"Privacy Policy","footer.contact":"Contatti","verified":"verificata","unverified":"non verificata","mobile.register":"Apri NoKeyAuth per registrarti","mobile.login":"Apri NoKeyAuth per accedere","mobile.hint":"Tocca per aprire l'app NoKeyAuth"},
+  es:{"home.sub":"Autenticación segura para tus cuentas.","home.register":"Crear cuenta","home.login":"Iniciar sesión","home.app":"Requiere la app NoKeyAuth en iOS","register.title":"Crear cuenta","register.sub":"Escanea el código QR con la app NoKeyAuth para registrarte.","login.title":"Iniciar sesión","login.sub":"Escanea el código QR con la app NoKeyAuth.","login.create":"Crear cuenta","profile.title":"Completa tu perfil","profile.sub":"Ingresa tus datos para finalizar el registro.","profile.nome":"Nombre","profile.cognome":"Apellido","profile.email":"Email","profile.username":"Nombre de usuario","profile.save":"Guardar y continuar","verify.title":"Verifica tu email","verify.sub":"Ingresa el código de 6 dígitos que te enviamos.","verify.btn":"Verificar","verify.resend":"Reenviar código","qr.generating":"Generando...","qr.waiting":"Esperando la app","or":"o","back":"← Volver","dashboard.logout":"Cerrar sesión","dash.email":"Email","dash.username":"Nombre de usuario","dash.verify_notice":"Verifica tu email para completar el registro.","dash.verify_now":"Verificar ahora →","footer.privacy":"Política de Privacidad","footer.contact":"Contacto","verified":"verificado","unverified":"no verificado","mobile.register":"Abre NoKeyAuth para registrarte","mobile.login":"Abre NoKeyAuth para iniciar sesión","mobile.hint":"Toca para abrir la app NoKeyAuth"}
 };
 
 let currentLang='en';
@@ -325,10 +359,16 @@ async function initRegisterQR(){
   try{
     const res=await fetch(`${API}/v1/auth/challenge`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:DOMAIN,type:'REGISTER'})});
     const data=await res.json();
-    const qrData=JSON.stringify({v:1,type:'REGISTER',nonce:data.nonce,sessionId:data.sessionId,domain:DOMAIN,callback:`${API}/v1/auth/verify`,expires:data.expires});
-    renderQR('register-qr-render','register-qr-loading',qrData);
-    startCountdown('register-countdown',60,initRegisterQR);
-    pollAuth('register',data.sessionId);
+    if(isMobile){
+      // Mobile: show deep link button instead of QR
+      renderMobileDeepLink('register-qr-box','REGISTER',data);
+      startCountdown('register-qr-box-countdown',60,initRegisterQR);
+    }else{
+      const qrData=JSON.stringify({v:1,type:'REGISTER',nonce:data.nonce,sessionId:data.sessionId,domain:DOMAIN,callback:`${API}/v1/auth/verify`,expires:data.expires});
+      renderQR('register-qr-render','register-qr-loading',qrData);
+      startCountdown('register-countdown',60,initRegisterQR);
+      pollAuth('register',data.sessionId);
+    }
   }catch(e){showStatus('register-status','Connection error. Retrying...','error');setTimeout(initRegisterQR,3000)}
 }
 
@@ -337,10 +377,16 @@ async function initLoginQR(){
   try{
     const res=await fetch(`${API}/v1/auth/challenge`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:DOMAIN,type:'AUTH'})});
     const data=await res.json();
-    const qrData=JSON.stringify({v:1,type:'AUTH',nonce:data.nonce,sessionId:data.sessionId,domain:DOMAIN,callback:`${API}/v1/auth/verify`,expires:data.expires});
-    renderQR('login-qr-render','login-qr-loading',qrData);
-    startCountdown('login-countdown',60,initLoginQR);
-    pollAuth('login',data.sessionId);
+    if(isMobile){
+      // Mobile: show deep link button instead of QR
+      renderMobileDeepLink('login-qr-box','AUTH',data);
+      startCountdown('login-qr-box-countdown',60,initLoginQR);
+    }else{
+      const qrData=JSON.stringify({v:1,type:'AUTH',nonce:data.nonce,sessionId:data.sessionId,domain:DOMAIN,callback:`${API}/v1/auth/verify`,expires:data.expires});
+      renderQR('login-qr-render','login-qr-loading',qrData);
+      startCountdown('login-countdown',60,initLoginQR);
+      pollAuth('login',data.sessionId);
+    }
   }catch(e){showStatus('login-status','Connection error. Retrying...','error');setTimeout(initLoginQR,3000)}
 }
 
