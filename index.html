@@ -432,6 +432,14 @@ async function saveProfile(){
     const res=await fetch(`${API}/v1/user/profile`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionToken}`},body:JSON.stringify({nome,cognome,email,username:username||undefined})});
     const data=await res.json();
     if(data.ok){
+      // Backend dice che l'email è già verificata sulla stessa stringa →
+      // niente verifica, vai direttamente alla dashboard. Pattern atteso
+      // per utenti esistenti che ri-aprono il form profilo.
+      if(data.emailVerified===true){
+        showStatus('profile-status','✓ Profile saved','success');
+        setTimeout(()=>loadDashboard(),800);
+        return;
+      }
       pendingEmail=email;
       await fetch(`${API}/v1/user/send-verification`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionToken}`},body:JSON.stringify({email})});
       document.getElementById('verify-sub').textContent=t('verify.sub')+' ('+email+')';
