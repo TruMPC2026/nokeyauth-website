@@ -419,28 +419,31 @@ function pollAuth(type,sessionId){
         clearPolling();
         sessionToken=data.sessionToken;
         localStorage.setItem('nka_token',sessionToken);
-        // resolvedType viene dal backend: 'AUTH' (utente esistente) o 'REGISTER'
-        // (nuovo). Fallback al tipo locale se data.type assente.
-        const resolvedType=(data.type==='AUTH'||data.type==='REGISTER')
-          ?data.type
-          :(type==='register'?'REGISTER':'AUTH');
         const statusEl=type==='register'?'register-status':'login-status';
-        if(resolvedType==='REGISTER'){
-          // Profilo nuovo: form obbligatoria.
-          showStatus(statusEl,'✓ Authenticated! Complete your profile.','success');
-          setTimeout(()=>showPage('profile-setup'),1000);
-        }else if(type==='register'){
-          // Mismatch: utente cliccato 'Create account' ma backend dice AUTH
-          // (A_0 già nel DB). Mostra pagina dedicata "Hai già un account" con
-          // bottone Accedi → loadDashboard. Non auto-route silenzioso: l'utente
-          // ha esplicitamente chiesto di registrarsi, deve sapere che esiste già.
-          showStatus(statusEl,'✓ Authenticated!','success');
-          setTimeout(()=>showPage('already-registered'),1000);
-        }else{
-          // Sign in normale: silent → dashboard.
-          showStatus(statusEl,'✓ Authenticated!','success');
-          setTimeout(()=>loadDashboard(),1000);
-        }
+        showStatus(statusEl,'✓ Authenticated!','success');
+
+        // Routing resilient: NON dipende da data.type (backend potrebbe non
+        // averlo ancora deployato). Source of truth è /v1/user/me, query DB
+        // diretta. Logica:
+        //   - click 'register' + utente esistente (in DB con dati profilo)
+        //     → showPage('already-registered') con bottone Accedi
+        //   - tutti gli altri casi → loadDashboard, che gestisce il routing
+        //     standard (profilo_completo=true → dashboard, false → profile-setup
+        //     pre-fillata).
+        setTimeout(async()=>{
+          if(type==='register'){
+            try{
+              const meRes=await fetch(`${API}/v1/user/me`,{headers:{'Authorization':`Bearer ${sessionToken}`}});
+              const me=await meRes.json();
+              const isReturningUser=me&&me.userId&&(me.profiloCompleto||me.email||me.nome);
+              if(isReturningUser){
+                showPage('already-registered');
+                return;
+              }
+            }catch(e){/* fallback su loadDashboard */}
+          }
+          loadDashboard();
+        },1000);
       }
     }catch(e){}
   },2000);
