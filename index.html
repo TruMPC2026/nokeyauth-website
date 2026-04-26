@@ -491,7 +491,21 @@ async function loadDashboard(){
     const notice=document.getElementById('dash-verify-notice');
     notice.className=u.email&&!u.emailVerificata?'status-msg status-info show':'status-msg';
     if(u.email&&!u.emailVerificata)pendingEmail=u.email;
-    if(!u.profiloCompleto)showPage('profile-setup');
+    if(!u.profiloCompleto){
+      // Pre-fill profile-setup form con i dati esistenti da /me. Senza
+      // questo, utenti routati a profile-setup (perché profilo_completo=
+      // false in DB ma con dati parzialmente popolati — scenario tipico
+      // post-migration di oggi: profilo_completo resettato a false ma
+      // nome/email preservati) vedevano form vuoto e dovevano ridigitare.
+      // Ora vedono i loro dati; click Save → backend skip-verification se
+      // email invariata e già verificata → loadDashboard → dashboard.
+      const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=val};
+      setVal('input-nome',u.nome);
+      setVal('input-cognome',u.cognome);
+      setVal('input-email',u.email);
+      setVal('input-username',u.username);
+      showPage('profile-setup');
+    }
     else showPage('dashboard');
   }catch(e){showPage('home')}
 }
