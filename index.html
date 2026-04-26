@@ -436,12 +436,23 @@ function pollAuth(type,sessionId){
               const meRes=await fetch(`${API}/v1/user/me`,{headers:{'Authorization':`Bearer ${sessionToken}`}});
               const me=await meRes.json();
               const isReturningUser=me&&me.userId&&(me.profiloCompleto||me.email||me.nome);
+              // Log diagnostico (rimuovere dopo verifica): permette debug routing
+              // senza filtrare la Network tab. Niente PII sensibili — solo flag.
+              console.log('[pollAuth/register] /me:',{
+                userId:!!me?.userId,
+                profiloCompleto:me?.profiloCompleto,
+                hasEmail:!!me?.email,
+                hasNome:!!me?.nome,
+                isReturningUser
+              });
               if(isReturningUser){
+                console.log('[pollAuth/register] → already-registered');
                 showPage('already-registered');
                 return;
               }
-            }catch(e){/* fallback su loadDashboard */}
+            }catch(e){console.warn('[pollAuth/register] /me failed:',e)}
           }
+          console.log('[pollAuth] → loadDashboard');
           loadDashboard();
         },1000);
       }
