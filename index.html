@@ -597,5 +597,6 @@ document.addEventListener('DOMContentLoaded',()=>{if(sessionToken)loadDashboard(
 })();
 </script>
 <script>(function(){var _s=window.setLang;if(typeof _s==="function"){window.setLang=function(l){_s(l);try{localStorage.setItem("nka_lang",l);}catch(e){}};}document.addEventListener("DOMContentLoaded",function(){try{var l=localStorage.getItem("nka_lang");if(l&&["en","it","es"].indexOf(l)>=0)window.setLang(l);}catch(e){}});})();</script>
+<script>document.addEventListener("DOMContentLoaded",function(){var links=document.querySelectorAll('a[href*="nokeyauth-public"]');if(!links.length)return;function params(){var a=document.querySelector(".lang-btn.active");var lang=a?a.textContent.trim().toLowerCase():(localStorage.getItem("nka_lang")||"en");var theme=document.documentElement.getAttribute("data-theme")==="light"?"light":"dark";return"?lang="+lang+"&theme="+theme;}function upd(){links.forEach(function(a){a.href=a.href.split("?")[0].split("#")[0]+params();});}upd();links.forEach(function(a){a.addEventListener("click",upd,true);});});</script>
 </body>
 </html>
