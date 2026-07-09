@@ -596,5 +596,6 @@ document.addEventListener('DOMContentLoaded',()=>{if(sessionToken)loadDashboard(
   document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll(".nav-right").forEach(function(nr){if(nr.querySelector(".theme-toggle"))return;var b=document.createElement("button");b.type="button";b.className="theme-toggle";b.setAttribute("aria-label","Cambia tema chiaro o scuro");b.addEventListener("click",window.toggleTheme);nr.insertBefore(b,nr.querySelector(".lang-switcher"));});paint();});
 })();
 </script>
+<script>(function(){var _s=window.setLang;if(typeof _s==="function"){window.setLang=function(l){_s(l);try{localStorage.setItem("nka_lang",l);}catch(e){}};}document.addEventListener("DOMContentLoaded",function(){try{var l=localStorage.getItem("nka_lang");if(l&&["en","it","es"].indexOf(l)>=0)window.setLang(l);}catch(e){}});})();</script>
 </body>
 </html>
